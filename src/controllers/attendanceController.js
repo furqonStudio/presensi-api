@@ -1,4 +1,6 @@
-const prisma = require('../prismaClient')
+const { PrismaClient } = require('@prisma/client')
+
+const prisma = new PrismaClient()
 
 // Get all attendances
 const getAllAttendances = async (req, res) => {

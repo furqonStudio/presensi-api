@@ -1,4 +1,6 @@
-const prisma = require('../prismaClient') // Assume Prisma Client is initialized here
+const { PrismaClient } = require('@prisma/client')
+
+const prisma = new PrismaClient()
 
 // Get all shifts
 const getAllShifts = async (req, res) => {
