@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -22,10 +16,47 @@ model User {
 }
 
 model Employee {
-  id       Int    @id @default(autoincrement())
-  name     String
-  position String
-  contact  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int       @id @default(autoincrement())
+  name         String
+  position     String
+  contact      String
+  officeId     Int
+  office       Office    @relation(fields: [officeId], references: [id])
+  attendances  Attendance[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Office {
+  id          Int          @id @default(autoincrement())
+  address     String
+  description String?      
+  shifts      Shift[]
+  employees   Employee[]   
+  attendances Attendance[] 
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Shift {
+  id              Int        @id @default(autoincrement())
+  officeId        Int
+  clockIn         DateTime   
+  clockOut        DateTime   
+  office          Office     @relation(fields: [officeId], references: [id])
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Attendance {
+  id           Int      @id @default(autoincrement())
+  employeeId   Int
+  officeId     Int
+  clockIn      DateTime
+  clockOut     DateTime?
+  status       String   
+  createdAt    DateTime @default(now())
+
+  employee     Employee @relation(fields: [employeeId], references: [id])
+  office       Office   @relation(fields: [officeId], references: [id]) 
 }

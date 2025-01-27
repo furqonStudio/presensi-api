@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient()
 
-// Ambil semua karyawan
+// Get all employees
 const getEmployees = async (req, res) => {
   try {
     const employees = await prisma.employee.findMany({
@@ -12,11 +12,12 @@ const getEmployees = async (req, res) => {
     })
     res.json(employees)
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to fetch employees' })
   }
 }
 
-// Ambil karyawan berdasarkan ID
+// Get employee by ID
 const getEmployeeById = async (req, res) => {
   try {
     const { id } = req.params
@@ -30,39 +31,54 @@ const getEmployeeById = async (req, res) => {
 
     res.json(employee)
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to fetch employee' })
   }
 }
 
-// Tambah karyawan baru
+// Create a new employee
 const createEmployee = async (req, res) => {
   try {
-    const { name, contact, position } = req.body
+    const { name, contact, position, officeId } = req.body
+
+    // Validate input
+    if (!name || !contact || !position || !officeId) {
+      return res.status(400).json({ error: 'All fields are required' })
+    }
+
     const newEmployee = await prisma.employee.create({
       data: {
         name,
         contact,
         position,
+        officeId, // Assuming officeId is a required field
       },
     })
     res.status(201).json(newEmployee)
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to create employee' })
   }
 }
 
-// Perbarui data karyawan
+// Update employee data
 const updateEmployee = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, email, phone, position } = req.body
+    const { name, contact, position, officeId } = req.body
+
+    // Validate input
+    if (!name || !contact || !position || !officeId) {
+      return res.status(400).json({ error: 'All fields are required' })
+    }
+
     const updatedEmployee = await prisma.employee.update({
       where: { id: Number(id) },
       data: {
         name,
-        email,
-        phone,
+        contact,
         position,
+        officeId, // Assuming officeId is a required field
         updatedAt: new Date(),
       },
     })
@@ -73,11 +89,12 @@ const updateEmployee = async (req, res) => {
 
     res.json(updatedEmployee)
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to update employee' })
   }
 }
 
-// Hapus karyawan
+// Delete employee
 const deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params
@@ -91,6 +108,7 @@ const deleteEmployee = async (req, res) => {
 
     res.status(204).send()
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to delete employee' })
   }
 }
