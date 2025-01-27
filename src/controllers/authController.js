@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const pool = require('../db/db')
+const { PrismaClient } = require('@prisma/client')
+
+const prisma = new PrismaClient()
 
 const registerUser = async (req, res) => {
   try {
@@ -8,14 +10,14 @@ const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const result = await pool.query(
-      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username',
-      [username, hashedPassword]
-    )
+    const user = await prisma.user.create({
+      data: {
+        username,
+        password: hashedPassword,
+      },
+    })
 
-    res
-      .status(201)
-      .json({ message: 'User registered successfully', user: result.rows[0] })
+    res.status(201).json({ message: 'User registered successfully', user })
   } catch (error) {
     res.status(500).json({ error: 'Failed to register user' })
   }
@@ -25,10 +27,9 @@ const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body
 
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [
-      username,
-    ])
-    const user = result.rows[0]
+    const user = await prisma.user.findUnique({
+      where: { username },
+    })
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' })
