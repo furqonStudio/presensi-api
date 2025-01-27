@@ -1,18 +1,18 @@
+require('dotenv').config()
 const express = require('express')
+const bodyParser = express.json
+const authRoutes = require('./routes/authRoutes')
 const employeeRoutes = require('./routes/employeeRoutes')
-const { neon } = require('@neondatabase/serverless')
 
 const app = express()
 
-app.use(express.json())
+// Middleware untuk parsing body
+app.use(bodyParser())
 
-app.get('/', async (_, res) => {
-  const sql = neon(`${process.env.DATABASE_URL}`)
-  const response = await sql`SELECT version()`
-  const { version } = response[0]
-  res.json({ version })
-})
+// Route autentikasi
+app.use('/api/auth', authRoutes)
 
+// Route karyawan (dengan proteksi autentikasi)
 app.use('/api/employees', employeeRoutes)
 
 module.exports = app
