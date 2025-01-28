@@ -5,11 +5,7 @@ const prisma = new PrismaClient()
 // Get all employees
 const getEmployees = async (req, res) => {
   try {
-    const employees = await prisma.employee.findMany({
-      orderBy: {
-        uniqueCode: 'asc', // Menggunakan uniqueCode untuk pengurutan
-      },
-    })
+    const employees = await prisma.employee.findMany()
     res.json(employees)
   } catch (error) {
     console.error(error)
