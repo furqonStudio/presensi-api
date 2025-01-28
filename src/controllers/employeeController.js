@@ -1,71 +1,118 @@
-const pool = require('../db/db')
+const { PrismaClient } = require('@prisma/client')
 
+const prisma = new PrismaClient()
+
+// Get all employees
 const getEmployees = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM employees ORDER BY id ASC')
-    res.json(result.rows)
+    const employees = await prisma.employee.findMany({
+      orderBy: {
+        uniqueCode: 'asc', // Menggunakan uniqueCode untuk pengurutan
+      },
+    })
+    res.json(employees)
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to fetch employees' })
   }
 }
 
+// Get employee by uniqueCode
 const getEmployeeById = async (req, res) => {
   try {
     const { id } = req.params
-    const result = await pool.query('SELECT * FROM employees WHERE id = $1', [
-      id,
-    ])
-    if (result.rows.length === 0) {
+    const employee = await prisma.employee.findUnique({
+      where: { id: id }, // Menggunakan id yang bertipe String
+    })
+
+    if (!employee) {
       return res.status(404).json({ error: 'Employee not found' })
     }
-    res.json(result.rows[0])
+
+    res.json(employee)
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to fetch employee' })
   }
 }
 
+// Create a new employee
 const createEmployee = async (req, res) => {
   try {
-    const { name, contact, position } = req.body
-    const result = await pool.query(
-      'INSERT INTO employees (name, position, contact) VALUES ($1, $2, $3) RETURNING *',
-      [name, position, contact]
-    )
-    res.status(201).json(result.rows[0])
+    const { name, position, contact, officeId } = req.body
+
+    if (!name || !contact || !position || !officeId) {
+      return res.status(400).json({ error: 'All fields are required' })
+    }
+
+    const employeeCount = await prisma.employee.count()
+    const id = `EMP${String(employeeCount + 1).padStart(4, '0')}`
+
+    const newEmployee = await prisma.employee.create({
+      data: {
+        id, // id adalah uniqueCode
+        name,
+        position,
+        contact,
+        officeId,
+      },
+    })
+
+    res.status(201).json(newEmployee)
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to create employee' })
   }
 }
 
+// Update employee data
 const updateEmployee = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, contact, position } = req.body
-    const result = await pool.query(
-      'UPDATE employees SET name = $1, position = $2, contact = $3, updated_at = NOW() WHERE id = $4 RETURNING *',
-      [name, position, contact, id]
-    )
-    if (result.rows.length === 0) {
+    const { name, contact, position, officeId } = req.body
+
+    // Validate input
+    if (!name || !contact || !position || !officeId) {
+      return res.status(400).json({ error: 'All fields are required' })
+    }
+
+    const updatedEmployee = await prisma.employee.update({
+      where: { id: id }, // Menggunakan id (uniqueCode) untuk pencarian
+      data: {
+        name,
+        contact,
+        position,
+        officeId, // Assuming officeId is a required field
+        updatedAt: new Date(),
+      },
+    })
+
+    if (!updatedEmployee) {
       return res.status(404).json({ error: 'Employee not found' })
     }
-    res.json(result.rows[0])
+
+    res.json(updatedEmployee)
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to update employee' })
   }
 }
 
+// Delete employee
 const deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params
-    const result = await pool.query(
-      'DELETE FROM employees WHERE id = $1 RETURNING *',
-      [id]
-    )
-    if (result.rows.length === 0) {
+    const deletedEmployee = await prisma.employee.delete({
+      where: { id: id }, // Menggunakan id (uniqueCode) untuk pencarian
+    })
+
+    if (!deletedEmployee) {
       return res.status(404).json({ error: 'Employee not found' })
     }
+
     res.status(204).send()
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to delete employee' })
   }
 }
