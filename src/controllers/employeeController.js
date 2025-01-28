@@ -7,7 +7,7 @@ const getEmployees = async (req, res) => {
   try {
     const employees = await prisma.employee.findMany({
       orderBy: {
-        id: 'asc',
+        uniqueCode: 'asc', // Menggunakan uniqueCode untuk pengurutan
       },
     })
     res.json(employees)
@@ -17,12 +17,12 @@ const getEmployees = async (req, res) => {
   }
 }
 
-// Get employee by ID
+// Get employee by uniqueCode
 const getEmployeeById = async (req, res) => {
   try {
     const { id } = req.params
     const employee = await prisma.employee.findUnique({
-      where: { id: Number(id) },
+      where: { id: id }, // Menggunakan id yang bertipe String
     })
 
     if (!employee) {
@@ -50,7 +50,7 @@ const createEmployee = async (req, res) => {
 
     const newEmployee = await prisma.employee.create({
       data: {
-        id,
+        id, // id adalah uniqueCode
         name,
         position,
         contact,
@@ -60,6 +60,7 @@ const createEmployee = async (req, res) => {
 
     res.status(201).json(newEmployee)
   } catch (error) {
+    console.error(error)
     res.status(500).json({ error: 'Failed to create employee' })
   }
 }
@@ -76,7 +77,7 @@ const updateEmployee = async (req, res) => {
     }
 
     const updatedEmployee = await prisma.employee.update({
-      where: { id: Number(id) },
+      where: { id: id }, // Menggunakan id (uniqueCode) untuk pencarian
       data: {
         name,
         contact,
@@ -102,7 +103,7 @@ const deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params
     const deletedEmployee = await prisma.employee.delete({
-      where: { id: Number(id) },
+      where: { id: id }, // Menggunakan id (uniqueCode) untuk pencarian
     })
 
     if (!deletedEmployee) {

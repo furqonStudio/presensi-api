@@ -31,7 +31,6 @@ model Office {
   id          Int          @id @default(autoincrement())
   address     String
   description String?      
-  shifts      Shift[]
   employees   Employee[]   
   attendances Attendance[] 
   createdAt   DateTime     @default(now())
@@ -40,10 +39,9 @@ model Office {
 
 model Shift {
   id              Int        @id @default(autoincrement())
-  officeId        Int
+  name            String
   clockIn         DateTime   
   clockOut        DateTime   
-  office          Office     @relation(fields: [officeId], references: [id])
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 }
