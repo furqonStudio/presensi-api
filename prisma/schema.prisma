@@ -30,7 +30,9 @@ model Employee {
 model Office {
   id          Int          @id @default(autoincrement())
   address     String
-  description String?      
+  description String?   
+  latitude    Float
+  longitude   Float   
   employees   Employee[]   
   attendances Attendance[] 
   createdAt   DateTime     @default(now())
