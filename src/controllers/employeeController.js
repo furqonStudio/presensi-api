@@ -39,24 +39,27 @@ const getEmployeeById = async (req, res) => {
 // Create a new employee
 const createEmployee = async (req, res) => {
   try {
-    const { name, contact, position, officeId } = req.body
+    const { name, position, contact, officeId } = req.body
 
-    // Validate input
     if (!name || !contact || !position || !officeId) {
       return res.status(400).json({ error: 'All fields are required' })
     }
 
+    const employeeCount = await prisma.employee.count()
+    const id = `EMP${String(employeeCount + 1).padStart(4, '0')}`
+
     const newEmployee = await prisma.employee.create({
       data: {
+        id,
         name,
-        contact,
         position,
-        officeId, // Assuming officeId is a required field
+        contact,
+        officeId,
       },
     })
+
     res.status(201).json(newEmployee)
   } catch (error) {
-    console.error(error)
     res.status(500).json({ error: 'Failed to create employee' })
   }
 }

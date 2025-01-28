@@ -16,7 +16,7 @@ model User {
 }
 
 model Employee {
-  id           Int       @id @default(autoincrement())
+  id           String       @id @unique     
   name         String
   position     String
   contact      String
@@ -50,11 +50,13 @@ model Shift {
 
 model Attendance {
   id           Int      @id @default(autoincrement())
-  employeeId   Int
+  employeeId   String
   officeId     Int
   clockIn      DateTime
   clockOut     DateTime?
-  status       String   
+  status       String
+  latitude     Float   
+  longitude    Float   
   createdAt    DateTime @default(now())
 
   employee     Employee @relation(fields: [employeeId], references: [id])

@@ -19,20 +19,32 @@ const getAllAttendances = async (req, res) => {
 
 // Create attendance record
 const createAttendance = async (req, res) => {
-  const { employeeId, officeId, clockIn, status } = req.body
-
   try {
+    const {
+      employeeId,
+      officeId,
+      clockIn,
+      clockOut,
+      status,
+      latitude,
+      longitude,
+    } = req.body
+
     const newAttendance = await prisma.attendance.create({
       data: {
         employeeId,
         officeId,
         clockIn: new Date(clockIn),
+        clockOut: clockOut ? new Date(clockOut) : null,
         status,
+        latitude,
+        longitude,
       },
     })
+
     res.status(201).json(newAttendance)
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    res.status(500).json({ error: 'Failed to create attendance' })
   }
 }
 
