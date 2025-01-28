@@ -1,5 +1,6 @@
 require('dotenv').config()
 const express = require('express')
+const cors = require('cors') // Import CORS
 const bodyParser = express.json
 const authRoutes = require('./routes/authRoutes')
 const employeeRoutes = require('./routes/employeeRoutes')
@@ -11,6 +12,7 @@ const app = express()
 
 // Middleware untuk parsing body
 app.use(bodyParser())
+app.use(cors())
 
 // Route autentikasi
 // app.use('/api/auth', authRoutes)
