@@ -11,5 +11,8 @@
       "src": "/(.*)",
       "dest": "src/server.js"
     }
-  ]
+  ],
+  "build": {
+    "commands": ["npx prisma generate", "npm run build"]
+  }
 }
