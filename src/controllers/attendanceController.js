@@ -22,6 +22,14 @@ const haversineDistance = (lat1, lon1, lat2, lon2) => {
   return distance
 }
 
+const isSameDay = (date1, date2) => {
+  return (
+    date1.getDate() === date2.getDate() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getFullYear() === date2.getFullYear()
+  )
+}
+
 // Get all attendances
 const getAllAttendances = async (req, res) => {
   try {
@@ -75,11 +83,9 @@ const createAttendance = async (req, res) => {
 
     // Check if the distance is within 10 meters
     if (distance > 10) {
-      return res
-        .status(400)
-        .json({
-          error: 'You must be within 10 meters of the office to clock in',
-        })
+      return res.status(400).json({
+        error: 'You must be within 10 meters of the office to clock in',
+      })
     }
 
     // If the location is valid, create the attendance record
@@ -119,6 +125,50 @@ const updateAttendance = async (req, res) => {
   }
 }
 
+const updateClockOut = async (req, res) => {
+  const { id } = req.params
+  const { clockOut } = req.body
+
+  // Validasi input
+  if (!clockOut) {
+    return res.status(400).json({ error: 'clockOut is required' })
+  }
+
+  try {
+    // Ambil data attendance berdasarkan ID
+    const attendance = await prisma.attendance.findUnique({
+      where: { id: parseInt(id, 10) },
+      select: { clockIn: true },
+    })
+
+    if (!attendance) {
+      return res.status(404).json({ error: 'Attendance not found' })
+    }
+
+    // Periksa apakah clockOut berada di hari yang sama dengan clockIn
+    const clockInDate = new Date(attendance.clockIn)
+    const clockOutDate = new Date(clockOut)
+
+    if (!isSameDay(clockInDate, clockOutDate)) {
+      return res
+        .status(400)
+        .json({ error: 'clockOut must be on the same day as clockIn' })
+    }
+
+    // Update attendance dengan clockOut
+    const updatedAttendance = await prisma.attendance.update({
+      where: { id: parseInt(id, 10) },
+      data: {
+        clockOut: new Date(clockOut),
+      },
+    })
+
+    res.status(200).json(updatedAttendance)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
 // Delete attendance record
 const deleteAttendance = async (req, res) => {
   const { id } = req.params
@@ -138,4 +188,5 @@ module.exports = {
   createAttendance,
   updateAttendance,
   deleteAttendance,
+  updateClockOut,
 }
