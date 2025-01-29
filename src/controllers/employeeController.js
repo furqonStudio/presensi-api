@@ -41,12 +41,34 @@ const createEmployee = async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' })
     }
 
-    const employeeCount = await prisma.employee.count()
-    const id = `EMP${String(employeeCount + 1).padStart(4, '0')}`
+    // Ambil tanggal sekarang
+    const now = new Date()
+    const day = String(now.getDate()).padStart(2, '0') // 2 digit hari
+    const month = String(now.getMonth() + 1).padStart(2, '0') // 2 digit bulan (getMonth mulai dari 0)
+    const year = now.getFullYear() // 4 digit tahun
+
+    // Format tanggal: DDMMYYYY
+    const today = `${day}${month}${year}`
+
+    // Hitung jumlah karyawan yang dibuat hari ini
+    const employeeCount = await prisma.employee.count({
+      where: {
+        createdAt: {
+          gte: new Date(now.setHours(0, 0, 0, 0)), // Awal hari
+          lt: new Date(now.setHours(23, 59, 59, 999)), // Akhir hari
+        },
+      },
+    })
+
+    // Nomor urut (misal: 0001, 0002, dst.)
+    const sequence = String(employeeCount + 1).padStart(4, '0')
+
+    // ID unik: KDDMMYYYYXXXX
+    const employeeId = `K${today}${sequence}`
 
     const newEmployee = await prisma.employee.create({
       data: {
-        id, // id adalah uniqueCode
+        id: employeeId,
         name,
         position,
         contact,
