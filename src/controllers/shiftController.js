@@ -19,6 +19,23 @@ const getAllShifts = async (req, res) => {
   }
 }
 
+const getShiftById = async (req, res) => {
+  try {
+    const { id } = req.params
+    const shift = await prisma.shift.findUnique({
+      where: { id: Number(id) },
+    })
+
+    if (!shift) {
+      return res.status(404).json({ error: 'Shift not found' })
+    }
+
+    res.status(200).json(shift)
+  } catch (error) {
+    console.error('Error fetching shift:', error)
+    res.status(500).json({ error: 'Failed to retrieve shift' })
+  }
+}
 // Create a new shift
 const createShift = async (req, res) => {
   const { name, clockIn, clockOut } = req.body
@@ -102,6 +119,7 @@ const deleteShift = async (req, res) => {
 
 module.exports = {
   getAllShifts,
+  getShiftById,
   createShift,
   updateShift,
   deleteShift,
