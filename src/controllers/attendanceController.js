@@ -65,7 +65,7 @@ const createAttendance = async (req, res) => {
   }
 
   try {
-    // Cek apakah karyawan sudah melakukan clock-in hari ini
+    // Cek apakah karyawan sudah clock-in hari ini
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -84,46 +84,47 @@ const createAttendance = async (req, res) => {
         .json({ error: 'You have already clocked in today' })
     }
 
-    // Ambil data kantor berdasarkan employeeId
-    const employee = await prisma.employee.findUnique({
-      where: { id: employeeId },
-      select: { officeId: true },
+    // Ambil semua kantor dari database
+    const offices = await prisma.office.findMany({
+      select: { id: true, latitude: true, longitude: true },
     })
 
-    if (!employee) {
-      return res.status(404).json({ error: 'Employee not found' })
+    if (!offices.length) {
+      return res.status(404).json({ error: 'No office locations found' })
     }
 
-    const office = await prisma.office.findUnique({
-      where: { id: employee.officeId },
-      select: { latitude: true, longitude: true },
-    })
+    // Cari kantor dalam radius tertentu (misal 30 meter)
+    let nearestOffice = null
+    let minDistance = Infinity
+    const radius = 30 // 30 meter
 
-    if (!office) {
-      return res.status(404).json({ error: 'Office not found' })
+    for (const office of offices) {
+      const distance = haversineDistance(
+        latitude,
+        longitude,
+        office.latitude,
+        office.longitude
+      )
+      if (distance <= radius && distance < minDistance) {
+        nearestOffice = office
+        minDistance = distance
+      }
     }
 
-    // Hitung jarak
-    const distance = haversineDistance(
-      latitude,
-      longitude,
-      office.latitude,
-      office.longitude
-    )
-
-    if (distance > 30) {
+    if (!nearestOffice) {
       return res.status(400).json({
-        error: 'You must be within 30 meters of the office to clock in',
+        error: 'You must be within 30 meters of an office to clock in',
       })
     }
 
-    const clockInTime = new Date() // Waktu sekarang sebagai clockIn
+    const clockInTime = new Date()
     const isEmployeeLate = isLate(clockInTime)
 
+    // Simpan presensi dengan `officeId` dari kantor terdekat
     const newAttendance = await prisma.attendance.create({
       data: {
         employeeId,
-        officeId: employee.officeId,
+        officeId: nearestOffice.id, // Gunakan kantor terdekat
         clockIn: clockInTime,
         status: isEmployeeLate ? 'terlambat' : 'hadir',
         latitude,
