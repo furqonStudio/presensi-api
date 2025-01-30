@@ -2,7 +2,6 @@ const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient()
 
-// Ambil semua karyawan
 const getOffices = async (req, res) => {
   try {
     const offices = await prisma.office.findMany({
@@ -16,7 +15,6 @@ const getOffices = async (req, res) => {
   }
 }
 
-// Ambil karyawan berdasarkan ID
 const getOfficeById = async (req, res) => {
   try {
     const { id } = req.params
@@ -34,14 +32,16 @@ const getOfficeById = async (req, res) => {
   }
 }
 
-// Tambah karyawan baru
 const createOffice = async (req, res) => {
   try {
-    const { address, description } = req.body
+    const { name, address, description, latitude, longitude } = req.body
     const newOffice = await prisma.office.create({
       data: {
+        name,
         address,
         description,
+        latitude,
+        longitude,
       },
     })
     res.status(201).json(newOffice)
@@ -50,19 +50,18 @@ const createOffice = async (req, res) => {
   }
 }
 
-// Perbarui data karyawan
 const updateOffice = async (req, res) => {
   try {
     const { id } = req.params
-    const { address, description, shifts, employees, attendances } = req.body
+    const { name, address, description, latitude, longitude } = req.body
     const updatedOffice = await prisma.office.update({
       where: { id: Number(id) },
       data: {
+        name,
         address,
         description,
-        shifts,
-        employees,
-        attendances,
+        latitude,
+        longitude,
         updatedAt: new Date(),
       },
     })
@@ -77,7 +76,6 @@ const updateOffice = async (req, res) => {
   }
 }
 
-// Hapus karyawan
 const deleteOffice = async (req, res) => {
   try {
     const { id } = req.params

@@ -29,6 +29,7 @@ model Employee {
 
 model Office {
   id          Int          @id @default(autoincrement())
+  name        String      
   address     String
   description String?   
   latitude    Float
