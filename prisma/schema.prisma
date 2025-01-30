@@ -41,23 +41,23 @@ model Office {
 }
 
 model Shift {
-  id              Int        @id @default(autoincrement())
-  name            String
-  clockIn         DateTime   
-  clockOut        DateTime   
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id        Int     @id @default(autoincrement())
+  name      String
+  clockIn   String  
+  clockOut  String? 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Attendance {
-  id           Int      @id @default(autoincrement())
+  id           Int     @id @default(autoincrement())
   employeeId   String
   officeId     Int
-  clockIn      DateTime
-  clockOut     DateTime?
+  clockIn      String  
+  clockOut     String?
   status       String
-  latitude     Float   
-  longitude    Float   
+  latitude     Float
+  longitude    Float
   createdAt    DateTime @default(now())
 
   employee     Employee @relation(fields: [employeeId], references: [id])
