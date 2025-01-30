@@ -53,8 +53,8 @@ model Attendance {
   id           Int     @id @default(autoincrement())
   employeeId   String
   officeId     Int
-  clockIn      String  
-  clockOut     String?
+  clockIn      DateTime
+  clockOut     DateTime?
   status       String
   latitude     Float
   longitude    Float

@@ -30,14 +30,23 @@ const isSameDay = (date1, date2) => {
   )
 }
 
+// Validate if the clockIn time is later than 08:00 WIB
+const isLate = (clockIn) => {
+  const clockInTime = new Date(clockIn)
+  const lateTime = new Date()
+  lateTime.setHours(8, 0, 0, 0) // Set the time to 08:00:00
+
+  return clockInTime > lateTime
+}
+
 // Get all attendances
 const getAllAttendances = async (req, res) => {
   try {
     const attendances = await prisma.attendance.findMany({
-      include: {
-        employee: true,
-        office: true,
-      },
+      // include: {
+      //   employee: true,
+      //   office: true,
+      // },
     })
     res.status(200).json(attendances)
   } catch (error) {
@@ -47,25 +56,46 @@ const getAllAttendances = async (req, res) => {
 
 // Create an attendance (presensi) and validate location
 const createAttendance = async (req, res) => {
-  const { employeeId, officeId, clockIn, status, latitude, longitude } =
-    req.body
+  const { employeeId, latitude, longitude } = req.body
 
-  // Validate required fields
-  if (
-    !employeeId ||
-    !officeId ||
-    !clockIn ||
-    !status ||
-    latitude === undefined ||
-    longitude === undefined
-  ) {
-    return res.status(400).json({ error: 'All fields are required' })
+  if (!employeeId || latitude === undefined || longitude === undefined) {
+    return res
+      .status(400)
+      .json({ error: 'Employee ID and location are required' })
   }
 
   try {
-    // Get the office coordinates from the database
+    // Cek apakah karyawan sudah melakukan clock-in hari ini
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
+        employeeId,
+        clockIn: {
+          gte: today,
+        },
+      },
+    })
+
+    if (existingAttendance) {
+      return res
+        .status(400)
+        .json({ error: 'You have already clocked in today' })
+    }
+
+    // Ambil data kantor berdasarkan employeeId
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: { officeId: true },
+    })
+
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' })
+    }
+
     const office = await prisma.office.findUnique({
-      where: { id: officeId },
+      where: { id: employee.officeId },
       select: { latitude: true, longitude: true },
     })
 
@@ -73,7 +103,7 @@ const createAttendance = async (req, res) => {
       return res.status(404).json({ error: 'Office not found' })
     }
 
-    // Calculate distance between employee's location and office location
+    // Hitung jarak
     const distance = haversineDistance(
       latitude,
       longitude,
@@ -81,20 +111,21 @@ const createAttendance = async (req, res) => {
       office.longitude
     )
 
-    // Check if the distance is within 10 meters
-    if (distance > 10) {
+    if (distance > 30) {
       return res.status(400).json({
-        error: 'You must be within 10 meters of the office to clock in',
+        error: 'You must be within 30 meters of the office to clock in',
       })
     }
 
-    // If the location is valid, create the attendance record
+    const clockInTime = new Date() // Waktu sekarang sebagai clockIn
+    const isEmployeeLate = isLate(clockInTime)
+
     const newAttendance = await prisma.attendance.create({
       data: {
         employeeId,
-        officeId,
-        clockIn: new Date(clockIn),
-        status,
+        officeId: employee.officeId,
+        clockIn: clockInTime,
+        status: isEmployeeLate ? 'terlambat' : 'hadir',
         latitude,
         longitude,
       },
@@ -107,60 +138,59 @@ const createAttendance = async (req, res) => {
 }
 
 // Update attendance (e.g., clock out)
-const updateAttendance = async (req, res) => {
-  const { id } = req.params
-  const { clockOut, status } = req.body
+// const updateAttendance = async (req, res) => {
+//   const { id } = req.params
+//   const { clockOut, status } = req.body
 
-  try {
-    const updatedAttendance = await prisma.attendance.update({
-      where: { id: parseInt(id, 10) },
-      data: {
-        clockOut: clockOut ? new Date(clockOut) : undefined,
-        status,
-      },
-    })
-    res.status(200).json(updatedAttendance)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
+//   try {
+//     const updatedAttendance = await prisma.attendance.update({
+//       where: { id: parseInt(id, 10) },
+//       data: {
+//         clockOut: clockOut ? new Date(clockOut) : undefined,
+//         status,
+//       },
+//     })
+//     res.status(200).json(updatedAttendance)
+//   } catch (error) {
+//     res.status(500).json({ error: error.message })
+//   }
+// }
 
 const updateClockOut = async (req, res) => {
-  const { id } = req.params
-  const { clockOut } = req.body
+  const { employeeId, latitude, longitude } = req.body
 
-  // Validasi input
-  if (!clockOut) {
-    return res.status(400).json({ error: 'clockOut is required' })
+  if (!employeeId || latitude === undefined || longitude === undefined) {
+    return res
+      .status(400)
+      .json({ error: 'Employee ID and location are required' })
   }
 
   try {
-    // Ambil data attendance berdasarkan ID
-    const attendance = await prisma.attendance.findUnique({
-      where: { id: parseInt(id, 10) },
-      select: { clockIn: true },
+    // Cari absensi hari ini yang sudah memiliki clockIn tetapi belum clockOut
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const attendance = await prisma.attendance.findFirst({
+      where: {
+        employeeId,
+        clockIn: {
+          gte: today,
+        },
+        clockOut: null,
+      },
+      orderBy: { clockIn: 'desc' },
     })
 
     if (!attendance) {
-      return res.status(404).json({ error: 'Attendance not found' })
-    }
-
-    // Periksa apakah clockOut berada di hari yang sama dengan clockIn
-    const clockInDate = new Date(attendance.clockIn)
-    const clockOutDate = new Date(clockOut)
-
-    if (!isSameDay(clockInDate, clockOutDate)) {
       return res
-        .status(400)
-        .json({ error: 'clockOut must be on the same day as clockIn' })
+        .status(404)
+        .json({ error: 'No clock-in record found for today' })
     }
 
-    // Update attendance dengan clockOut
+    const clockOutTime = new Date()
+
     const updatedAttendance = await prisma.attendance.update({
-      where: { id: parseInt(id, 10) },
-      data: {
-        clockOut: new Date(clockOut),
-      },
+      where: { id: attendance.id },
+      data: { clockOut: clockOutTime },
     })
 
     res.status(200).json(updatedAttendance)
@@ -186,7 +216,7 @@ const deleteAttendance = async (req, res) => {
 module.exports = {
   getAllAttendances,
   createAttendance,
-  updateAttendance,
+  // updateAttendance,
   deleteAttendance,
   updateClockOut,
 }
