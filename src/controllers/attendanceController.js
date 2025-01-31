@@ -22,32 +22,10 @@ const haversineDistance = (lat1, lon1, lat2, lon2) => {
   return distance
 }
 
-const isSameDay = (date1, date2) => {
-  return (
-    date1.getDate() === date2.getDate() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getFullYear() === date2.getFullYear()
-  )
-}
-
-// Validate if the clockIn time is later than 08:00 WIB
-const isLate = (clockIn) => {
-  const clockInTime = new Date(clockIn)
-  const lateTime = new Date()
-  lateTime.setHours(8, 0, 0, 0) // Set the time to 08:00:00
-
-  return clockInTime > lateTime
-}
-
 // Get all attendances
 const getAllAttendances = async (req, res) => {
   try {
-    const attendances = await prisma.attendance.findMany({
-      // include: {
-      //   employee: true,
-      //   office: true,
-      // },
-    })
+    const attendances = await prisma.attendance.findMany()
     res.status(200).json(attendances)
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -65,6 +43,15 @@ const createAttendance = async (req, res) => {
   }
 
   try {
+    // Validate employee ID
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+    })
+
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' })
+    }
+
     // Cek apakah karyawan sudah clock-in hari ini
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -118,17 +105,13 @@ const createAttendance = async (req, res) => {
     }
 
     const clockInTime = new Date()
-    const isEmployeeLate = isLate(clockInTime)
 
     // Simpan presensi dengan `officeId` dari kantor terdekat
     const newAttendance = await prisma.attendance.create({
       data: {
         employeeId,
-        officeId: nearestOffice.id, // Gunakan kantor terdekat
+        officeId: nearestOffice.id,
         clockIn: clockInTime,
-        status: isEmployeeLate ? 'terlambat' : 'hadir',
-        latitude,
-        longitude,
       },
     })
 
@@ -138,25 +121,7 @@ const createAttendance = async (req, res) => {
   }
 }
 
-// Update attendance (e.g., clock out)
-// const updateAttendance = async (req, res) => {
-//   const { id } = req.params
-//   const { clockOut, status } = req.body
-
-//   try {
-//     const updatedAttendance = await prisma.attendance.update({
-//       where: { id: parseInt(id, 10) },
-//       data: {
-//         clockOut: clockOut ? new Date(clockOut) : undefined,
-//         status,
-//       },
-//     })
-//     res.status(200).json(updatedAttendance)
-//   } catch (error) {
-//     res.status(500).json({ error: error.message })
-//   }
-// }
-
+// Update attendance (clock-out) and validate location
 const updateClockOut = async (req, res) => {
   const { employeeId, latitude, longitude } = req.body
 
@@ -167,6 +132,15 @@ const updateClockOut = async (req, res) => {
   }
 
   try {
+    // Validate employee ID
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+    })
+
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' })
+    }
+
     // Cari absensi hari ini yang sudah memiliki clockIn tetapi belum clockOut
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -185,6 +159,34 @@ const updateClockOut = async (req, res) => {
       return res
         .status(404)
         .json({ error: 'No clock-in record found for today' })
+    }
+
+    // Cek apakah karyawan sudah berada di kantor terdekat saat clock-out
+    const offices = await prisma.office.findMany({
+      select: { id: true, latitude: true, longitude: true },
+    })
+
+    let nearestOffice = null
+    let minDistance = Infinity
+    const radius = 30 // 30 meter
+
+    for (const office of offices) {
+      const distance = haversineDistance(
+        latitude,
+        longitude,
+        office.latitude,
+        office.longitude
+      )
+      if (distance <= radius && distance < minDistance) {
+        nearestOffice = office
+        minDistance = distance
+      }
+    }
+
+    if (!nearestOffice) {
+      return res.status(400).json({
+        error: 'You must be within 30 meters of an office to clock out',
+      })
     }
 
     const clockOutTime = new Date()
@@ -217,7 +219,6 @@ const deleteAttendance = async (req, res) => {
 module.exports = {
   getAllAttendances,
   createAttendance,
-  // updateAttendance,
-  deleteAttendance,
   updateClockOut,
+  deleteAttendance,
 }

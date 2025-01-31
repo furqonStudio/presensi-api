@@ -55,8 +55,6 @@ model Attendance {
   officeId     Int
   clockIn      DateTime
   clockOut     DateTime?
-  latitude     Float
-  longitude    Float
   createdAt    DateTime @default(now())
 
   employee     Employee @relation(fields: [employeeId], references: [id])
