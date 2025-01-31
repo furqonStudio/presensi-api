@@ -43,8 +43,8 @@ model Office {
 model Shift {
   id        Int     @id @default(autoincrement())
   name      String
-  clockIn   String  
-  clockOut  String? 
+  clockIn   DateTime  
+  clockOut  DateTime 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -55,7 +55,6 @@ model Attendance {
   officeId     Int
   clockIn      DateTime
   clockOut     DateTime?
-  status       String
   latitude     Float
   longitude    Float
   createdAt    DateTime @default(now())
