@@ -15,7 +15,7 @@ app.use(bodyParser())
 app.use(cors())
 
 // Route autentikasi
-// app.use('/api/auth', authRoutes)
+app.use('/api/auth', authRoutes)
 
 // Route karyawan (dengan proteksi autentikasi)
 app.use('/api/employees', employeeRoutes)
